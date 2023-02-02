@@ -509,17 +509,39 @@ begin
 end
 
 /*to receive when customer returns rented car*/
-create procedure return_Car(@rent_ID int,@damage_Compensation money)
+create procedure return_Car(@rent_ID int,@damage_Compensation money)/* we need to also make this related to managers may be add column to that table to show who manages the rent and the return*/
 as
 begin
-	declare @punishment money,@total_Payment money,@rental_Price_Per_Day money,@return_Date date,@payment money
-	 set @rental_Price_Per_Day=(select rental_Price_Per_Day from Car where car_ID in(select car_ID from Reservation where reservation_ID in
-	                           (select reservation_ID from Rent where rent_ID=@rent_ID)))
-	 set @return_Date=(select return_Date from Rent where rent_ID=@rent_ID)
-	 set @punishment=(@rental_Price_Per_Day*datediff(day,getdate(),@return_Date)*1.3)
-	 set @payment=(select payment from Rent where rent_ID=@rent_ID)
-	 set @total_Payment=@payment+@punishment+@damage_Compensation
-	insert into Rent_Invoice values(@rent_ID,@punishment,getdate(),@damage_Compensation,@total_Payment)
+	if not exists(select * from Rent_Invoice where rent_ID=@rent_ID) and exists(select * from Rent where rent_ID=@rent_ID)
+	begin
+		declare @punishment money,@total_Payment money,@rental_Price_Per_Day money,@return_Date date,@payment money,@rented_Date int
+		 set @rental_Price_Per_Day=(select rental_Price_Per_Day from Car where car_ID in(select car_ID from Reservation where reservation_ID in
+		                           (select reservation_ID from Rent where rent_ID=@rent_ID)))
+		 set @return_Date=(select return_Date from Rent where rent_ID=@rent_ID)
+		 if(datediff(day,@return_Date,getdate())<=0)
+		  begin
+		   set @punishment=0
+		   set @rented_Date=datediff(day,(select pick_Up_Date from Rent where rent_ID=@rent_ID),@return_Date)
+		  end
+		 else
+		  begin
+		   set @punishment=(@rental_Price_Per_Day*datediff(day,@return_Date,getdate())*1.3)
+		   set @rented_Date=datediff(day,(select pick_Up_Date from Rent where rent_ID=@rent_ID),getdate())
+		  end
+		 set @payment=(select payment from Rent where rent_ID=@rent_ID)
+		 set @total_Payment=@payment+@punishment+@damage_Compensation
+		 insert into Rent_Invoice values(@rent_ID,@punishment,getdate(),@damage_Compensation,@total_Payment)
+	     update Car
+	     set status='available' where car_ID=(select car_ID from Car where car_ID in(select car_ID from Reservation where reservation_ID in
+		                                     (select reservation_ID from Rent where rent_ID=@rent_ID)))
+		 update Car
+		 set total_Rented_Date=total_Rented_Date+@rented_Date where car_ID in(select car_ID from Reservation where reservation_ID in
+															 (select reservation_ID from Rent where rent_ID=@rent_ID))
+	end
+	else if exists(select * from Rent_Invoice where rent_ID=@rent_ID)
+		print 'the car is already returned'
+	else
+		print 'wrong input'
 end
 
 /*to sell cars for managers*/
@@ -592,6 +614,5 @@ end
 								/*---create triggers---*/
 
 /*to restrict date of birth*/
-/*to check the email is not repeated when user creates account*/
-/*to check driving_licence_no's and not repeated(but for creating account cause user with account can rent in person means same licence_no)*/
 /*to make new cars rentable after a year or something (don't know if it's trigger or procedure tho)*/
+/*to update prices based on somthing*/
