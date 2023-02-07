@@ -2,7 +2,11 @@
 
 								/*---create login, role, blabla---*/				
 
-
+/*3 logins*/
+/*3 users*/
+/*? roles*/
+/*? schema*/
+/**/
 
 
 
@@ -37,7 +41,7 @@ m_Name varchar(20) not null,
 l_Name varchar(20) not null,
 driving_Licence_No varchar(10) not null,
 birth_Date date not null,
-email varchar(30) constraint email foreign key(email) references Login(email),/*if we are using this for in person customers only...it's not relevant*/
+email varchar(30) constraint email foreign key(email) references Login(email) unique,/*if we are using this for in person customers only...it's not relevant*/
 )
 
 create table Customer_Phone_No(
@@ -57,7 +61,7 @@ admin_ID int identity(1,1) primary key not null,
 f_Name varchar(20) not null,
 m_Name varchar(20) not null,
 l_Name varchar(20) not null,
-email varchar(30) constraint email foreign key(email) references Login(email) not null
+email varchar(30) constraint email foreign key(email) references Login(email) unique not null
 )
 
 create table Admin_Phone_No(
@@ -78,7 +82,7 @@ manager_ID int identity(1,1) primary key not null,
 f_Name varchar(20) not null,
 m_Name varchar(20) not null,
 l_Name varchar(20) not null,
-email varchar(30) constraint email foreign key(email) references Login(email) not null
+email varchar(30) constraint email foreign key(email) references Login(email) unique not null
 )
 
 create table Manager_Phone_No(
@@ -220,7 +224,7 @@ as select sale_ID,customer_ID,f_Name+' '+m_Name+' '+l_Name as 'Customer Name',ma
 
 				/*--for cars*/
 
-/*to view available cars*/
+/*to view available cars (for all)*/
 create function view_Available_Cars()
 returns table
 as
@@ -234,25 +238,25 @@ return select *, case when total_Rented_Date<=100 then 'new'
 			  when total_Rented_Date between 101 and 400 then 'slightly used' else 'used' 
 			  end condition from Car
 
-/*to view suspended cars for service*/
+/*to view suspended cars for service (for admin and managers)*/
 create function view_Suspended_Cars()
 returns table
 as
 return select * from view_For_Cars where status='service'
 
-/*to view suspended cars for service*/
+/*to view reserved cars for service (for admin and managers)*/
 create function view_Reserved_Cars()
 returns table
 as
 return select * from view_For_Cars where status='reserved'
 
-/*to view suspended cars for service*/
+/*to view rented cars for service (for admin and managers)*/
 create function view_Rented_Cars()
 returns table
 as
 return select * from view_For_Cars where status='rented'
 
-/*to view suspended cars for service*/
+/*to view sold cars (for admin and managers)*/
 create function view_Sold_Cars()
 returns table
 as
@@ -261,25 +265,25 @@ return select * from view_For_Cars where status='sold'
 
 				/*--for reservation--*//*check how asc and dsc works for date*/
 
-/*to view the reservation history*/
+/*to view the reservation history (for admin and manager)*/
 create function view_Reservation_History()  /*view : Customer, Reservatrion, Car*/
 returns table
 as
 return select * from view_For_Reservation
 
-/*to view the reservation list*/
+/*to view the reservation list (for admin and managers)*/
 create function view_All_Active_Reservation()
 returns table
 as
 return select * from view_For_Reservation where view_For_Reservation.reservation_Status=0
 
-/*to view the reservation list from today*/
+/*to view the reservation list from today (for admin and managers)*/
 create function view_Reservation_Today()
 returns table
 as
 return select * from view_For_Reservation where reserved_Date=getDate()
 
-/*to view reservation list from given date*/
+/*to view reservation list from given date (for admin and managers)*/
 create function view_Reservation_At_Given_Date(@year int,@month int,@day int)
 returns table
 as 
@@ -290,73 +294,73 @@ return select * from view_For_Reservation where year(reserved_Date)=@year and mo
 
 				/*--for rent--*/
 
-/*to view all rented car(both returned and not returned)*//*view : Customer, Car, Rent, Mangager...*/
+/*to view all rented car (both returned and not returned)(for admin and managers)*//*view : Customer, Car, Rent, Mangager...*/
 create function view_All_Rented()
 returns table
 as
 return select * from view_For_Rented
 
-/*to view rented but not returned (present in rent table but not rent_invoice table)*/
+/*to view rented but not returned (present in rent table but not rent_invoice table)(for admin and managers)*/
 create function view_Not_Returned()
 returns table
 as
 return select * from view_For_Rented where not exists(select * from Rent_Invoice where view_For_Rented.rent_ID=Rent_Invoice.rent_ID)
 
-/*to view not returned and passed deadline*/
+/*to view not returned and passed deadline (for admin and managers)*/
 create function view_Passed_Deadline_Not_Returned()
 returns table
 as
 return select * from view_For_Rented where not exists(select * from Rent_Invoice where view_For_Rented.rent_ID=Rent_Invoice.rent_ID) and datediff(day,return_Date,getdate())>0
 
-/*view car to be returned today*/
+/*view car to be returned today (for admin and managers)*/
 create function view_To_Be_Returned_Today()
 returns table
 as
 return select * from view_For_Rented where not exists(select * from Rent_Invoice where view_For_Rented.rent_ID=Rent_Invoice.rent_ID) and return_Date=getdate()
 
-/*admin wants to view the rents a manager managed*/
+/*admin wants to view the rents a manager managed (for admin and managers)*/
 create function view_Managed_Rents(@manager_ID int)
 returns table
 as
 return select * from view_For_Rented where manager_ID=@manager_ID 
 
-/*admin wants to view what rents he managed*/
+/*admin wants to view what rents he managed (for admin only)*/
 create function view_Rented_By_Admin()
 returns table
 as
 return select * from view_For_Rented where manager_ID=NULL
 
-/*to view rented and returned*/
+/*to view rented and returned (for admin and managers)*/
 create function view_Rented_Returned() /*view : Customer, Rent, Car, Rent_Invoice, Manager...*/
 returns table
 as
 return select * from view_For_Rented_Returned
 
-/*to view rented and returned today*/
+/*to view rented and returned today (for admin and managers)*/
 create function view_Rented_Returned_Today()
 returns table
 as
 return select * from view_For_Rented_Returned where actual_Return_Date=getDate()
 
-/*to view rented and returned at given date*/
+/*to view rented and returned at given date (for admin and managers)*/
 create function view_Rented_Returned_At_Given_Date(@year int,@month int,@day int)
 returns table
 as
 return select * from view_For_Rented_Returned where year(actual_Return_Date)=@year and month(actual_Return_Date)=@month and day(actual_Return_Date)=@day
 
-/*view a particular customer's rental history*/
+/*view a particular customer's rental history (for admin and managers)*/
 create function view_Customer_Rental_History(@customer_ID int)
 returns table
 as
 return select * from view_For_Rented_Returned where view_For_Rented_Returned.customer_ID=@customer_ID 
 
-/*admin wants to view the returns a manager managed*/  /*but right there, the one who rents may differ from the one who receives*/
+/*admin wants to view the returns a manager managed (for admin and managers)*/
 create function view_Managed_Returns(@manager_ID int)
 returns table
 as
 return select * from view_For_Rented_Returned where manager_Who_Accepted=@manager_ID 
 
-/*admin wants to view what returns he managed*/
+/*admin wants to view what returns he managed (for admin only)*/
 create function view_Returned_Through_Admin()
 returns table
 as
@@ -369,37 +373,37 @@ return select * from view_For_Rented_Returned where manager_Who_Accepted=NULL
 
 				/*--for sales--*/
 
-/*to view all sales*/
+/*to view all sales (for admin and managers)*/
 create function view_All_Sales() /*view : Customer, Sale, Car, Manager...*/
 returns table
 as
 return select * from view_For_Sales 
 
-/*to view sales from today*/
+/*to view sales from today(for admin and managers)*/
 create function view_All_Sales_Today()
 returns table
 as
 return select * from view_For_Sales where date_Of_Sale=getDate()
 
-/*to view sales from given date*/
+/*to view sales from given date (for admin and managers)*/
 create function view_All_Sales_At_Given_Date(@year int, @month int, @day int)
 returns table
 as
 return select * from view_For_Sales where year(date_Of_Sale)=@year and month(date_Of_Sale)=@month and day(date_Of_Sale)=@day
 
-/*view a particular customer's sales history*/
+/*view a particular customer's sales history (for all)*/
 create function view_Customer_Sales_History(@customer_ID int)
 returns table
 as
 return select * from view_For_Sales where view_For_Sales.customer_ID=@customer_ID
 
-/*admin wants to view what sales a manager managed*/
+/*admin wants to view what sales a manager managed (for admin and managers)*/
 create function view_Managed_Sales(@manager_ID int)
 returns table
 as
 return select * from view_For_Sales where manager_ID=@manager_ID
 
-/*admin wants to view what sales he managed*/
+/*admin wants to view what sales he managed (for admin only)*/
 create function view_Sales_By_Admin()
 returns table
 as
@@ -415,43 +419,44 @@ return select * from view_For_Sales where manager_ID=NULL
 create function search_By_Sales_Price(@max int, @min int)
 returns table
 as
-return select * from view_For_Cars where sales_Price between @min and @max
+return select *,count(*) as 'available quantity' from view_For_Cars where sales_Price between @min and @max
+
 
 /*search by rent price range*/
 create function search_By_Rental_Price(@max int, @min int)
 returns table
 as
-return select * from view_For_Cars where rental_Price_Per_Day between @min and @max
+return select *,count(*) as 'available quantity' from view_For_Cars where rental_Price_Per_Day between @min and @max
 
 /*search by model*/
 create function search_By_Model(@model varchar(30))
 returns table
 as
-return select * from view_For_Cars where model=@model
+return select *,count(*) as 'available quantity' from view_For_Cars where model=@model
 
 /*search by mark*/
 create function search_By_Mark(@mark varchar(30))
 returns table
 as
-return select * from view_For_Cars where mark=@mark
+return select *,count(*) as 'available quantity' from view_For_Cars where mark=@mark
 
 /*search by manufacture year*/
 create function search_By_Manufacture_Year(@manufacture_Year int)
 returns table
 as
-return select * from view_For_Cars where manufacture_Year=@manufacture_Year
+return select *,count(*) as 'available quantity' from view_For_Cars where manufacture_Year=@manufacture_Year
 
 /*search by transmission type*/
 create function search_By_Transmission_Type(@transmission_Type varchar(30))
 returns table
 as
-return select * from view_For_Cars where transmission_Type=@transmission_Type
+return select *,count(*) as 'available quantity' from view_For_Cars where transmission_Type=@transmission_Type
 
 /*search by horse power*/
 create function search_By_Horse_Power(@horse_Power int)
 returns table
 as
-return select * from view_For_Cars where horse_Power=@horse_Power
+return select *,count(*) as 'available quantity' from view_For_Cars where horse_Power=@horse_Power
 
 
 
@@ -496,7 +501,7 @@ end
 				/*to view customers and managers info*/
 
 /*for customer*/
-create procedure view_Customer_Info(@customer_ID int)
+create procedure view_Customer_Info(@customer_ID int)/*(for all)*/
 as
 begin
 	if not exists(select * from Customer where customer_ID=@customer_ID)
@@ -531,7 +536,7 @@ as
 begin
 	if exists(select * from Customer where email=@email)
 		print 'there is already a customer account with the email you inserted'
-	else if exists(select * from Customer where driving_Licence_No=@driving_Licence_No)
+	else if exists(select * from Customer where driving_Licence_No=@driving_Licence_No and email!=null)
 		print 'there is already a customer account with the driving licence number you inserted'
 	else
 	  begin
@@ -550,7 +555,8 @@ end
 create procedure add_Customer_Phone_Number(@customer_ID int,@phone_Number int)
 as
 begin
-	if exists(select * from Customer_Phone_No where phone_No=@phone_Number)
+	if exists(select * from Customer_Phone_No where phone_No=@phone_Number and customer_ID 
+	          in(select customer_ID from Customer where email!=null))
 		print 'the phone number you inserted is already there'
 	else
 		insert into Customer_Phone_No values(@phone_Number,@customer_ID)
@@ -570,6 +576,8 @@ begin
 		set @admin_ID=(select admin_ID from Admin where email=@email)
 		insert into Admin_Phone_No values(@phone_Number,@admin_ID)
 		insert into Admin_Address values(@city,@kebele,@admin_ID)
+		print 'your admin id is'
+		print @admin_ID
 	  end
 end
 
@@ -580,7 +588,7 @@ begin
 	if exists(select * from Admin_Phone_No where phone_No=@phone_Number) or exists(select * from Manager_Phone_No where phone_No=@phone_Number)
 		print 'you can not add the phone number,it already exists'
 	else
-		insert into Customer_Phone_No values(@phone_Number,@admin_ID)
+		insert into Admin_Phone_No values(@phone_Number,@admin_ID)
 end
 
 /* for managers */
@@ -609,7 +617,7 @@ begin
 	if exists(select * from Admin_Phone_No where phone_No=@phone_Number) or exists(select * from Manager_Phone_No where phone_No=@phone_Number)
 		print 'you can not add the phone number,it already exists'
 	else
-		insert into Customer_Phone_No values(@phone_Number,@manager_ID)
+		insert into Manager_Phone_No values(@phone_Number,@manager_ID)
 end
 
 				/*to reserve cars both for rent and sale*/
@@ -632,8 +640,8 @@ begin
 		print 'invalid input'
 	else if not((select status from Car where car_ID=@car_ID)='available')
 		print 'sorry, the car you chose is not available'
-	else if(@reserve_Payment<50)
-		print 'minimum payment is birr 50'
+	else if(@reserve_Payment<50 or @reserve_Payment>250)
+		print 'payment range is between 50 and 250'
 	else
 	  begin
 		declare @reserve_Type varchar(5)
@@ -648,15 +656,13 @@ begin
 		print dbo.calc_Reserve_Date(@reserve_Payment)
 		print 'days, the reservation will expire after '
 		print dbo.calc_Reserve_Date(@reserve_Payment)*24
-		print 'hours if you do not buy or rent it before'
+		print 'hours. If you do not buy or rent it before, your reservation will expire'
 		print 'your reservation id is '
 		print (select reservation_ID from Reservation where customer_ID=@customer_ID and car_ID=@car_ID and status=0)
 	  end
 end
 
 /*to change password*/
-/*to login*/
-/*to logout*/
 
 				/* adding cars for admin */
 
@@ -680,7 +686,7 @@ begin
 	               'available',@horse_Power,@sales_Price,@sales_Price*0.005,@total_Rented_Date,getdate(),@plate_Number)
 end
 
-				/*to cancel reservation (delete the record from reservation table and add to some new table)*/
+				/*to cancel reservation (delete the record from reservation table and add to Canceled_Reservation table)*/
 
 create procedure cancel_Reservation(@customer_ID int,@reservation_ID int)
 as
@@ -711,16 +717,16 @@ begin
 	set @payment=(@rental_Price_Per_Day*@no_Of_Days_Rented)-@reserve_Payment
 	return @payment
 end
-/*to check if the customer has no cars to return*/
+/*to check if the customer has no cars to return*//*we have to check that customer is free through account and through in person*/
 create function check_Customer_Free(@reservation_ID int)
 returns int
 as
 begin
-	declare @customer_ID int
-	set @customer_ID=(select customer_ID from Reservation where reservation_ID=@reservation_ID)
-	if exists(select * from Rent where reservation_ID in(select reservation_ID from Reservation where customer_ID=@customer_ID)) and
+	declare @dirving_Licence_No int
+	set @dirving_Licence_No=(select driving_Licence_No from Customer where customer_ID in(select customer_ID from Reservation where reservation_ID=@reservation_ID))
+	if exists(select * from Rent where reservation_ID in(select reservation_ID from Reservation where customer_ID in (select customer_ID from Customer where driving_Licence_No=@dirving_Licence_No))) and
 	   not exists(select * from Rent_Invoice where rent_ID in(select rent_ID from Rent where reservation_ID in
-	   (select reservation_ID from Reservation where customer_ID=@customer_ID)))
+	   (select reservation_ID from Reservation where customer_ID in(select customer_ID from Customer where driving_Licence_No=@dirving_Licence_No))))
 	   return 1
 	else
 	   return 0
@@ -759,7 +765,7 @@ end
 
 /*to receive when customer returns rented car(but first we have to tell the customer his punishments)*/
 
-/*function to know how much you the punishment it*/
+/*function to know how much the punishment is*/
 create function calc_Punishment(@rent_ID int)
 returns money
 as
@@ -857,7 +863,6 @@ begin
 		insert into Managers_Manage_Reservation(reservation_ID) values (@reservation_ID)
 		print 'your rent id is '
 		print (select rent_ID from Rent where reservation_ID=@reservation_ID)
-		print 'your manager is the admin'
 		print 'you will use this number to return the car'
 	end
 	else
@@ -924,7 +929,7 @@ end
 create procedure record_Customer_Info_In_Person(@f_Name varchar(20),@m_Name varchar(20),@l_Name varchar(20),@driving_Licence_No int, @birth_Date date,@phone_Number int,@city varchar(15),@kebele varchar(15))
 as
 begin
-	insert into Customer values(@f_Name,@m_Name,@l_Name,@driving_Licence_No,@birth_Date)
+	insert into Customer(f_Name,m_Name,l_Name,driving_Licence_No,birth_Date) values(@f_Name,@m_Name,@l_Name,@driving_Licence_No,@birth_Date)
     declare @customer_ID int
 	set @customer_ID=(select count(*) from Customer)
 	insert into Customer_Phone_No values(@phone_Number,@customer_ID)
@@ -1009,10 +1014,10 @@ end
 create trigger update_Price on Car for insert 
 as 
 begin
-	if((select sales_Price from Car)%100=0 and not(select status from inserted)='sold')
+	if((select total_Rented_Date from Car)%100=0 and not(select status from inserted)='sold')/*%doesn't work so....*/
 	begin	
 		update Car
-		set sales_Price=sales_Price*.98 
+		set sales_Price=sales_Price*.98
 		update Car
 		set rental_Price_Per_Day=rental_Price_Per_Day*.98
 	end
