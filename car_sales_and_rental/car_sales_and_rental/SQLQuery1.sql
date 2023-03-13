@@ -13,7 +13,7 @@ use car_sales_and_rental
 								/*---create login, role, schema,granting---*/				
 
 
-create schema login /*we don't authorize nobody to this schema*/
+create schema login
 create schema system_Users 
 create schema resources
 
@@ -27,7 +27,9 @@ grant control on schema:: system_Users to admin with grant option
 grant control on schema:: resources to admin with grant option
 
 /*granting for customer*/
-
+grant select on object::resources.view_Available_Cars to manager
+grant select on object::resources.view_rented_cars to manager 
+grant select on object::resources.view_rented_cars to manager 
 --functions
 grant select on object::resources.view_Available_Cars to customer
 grant select on object::resources.search_By_Sales_Price to customer
@@ -50,7 +52,8 @@ grant execute on object::system_Users.add_Customer_Phone_Number to customer
 grant execute on object::resources.reserve_Car to customer
 grant execute on object::resources.cancel_Reservation to customer
 
---trigger (denying altering triggers(to disable or ...))
+--trigger (denying disabling triggers)
+deny alter any database ddl trigger to customer
 
 
 /*granting for manager*/
@@ -105,25 +108,24 @@ grant execute on object::resources.sell_Car to manager
 grant execute on object::system_Users.record_Customer_Info_In_Person to manager
 grant execute on object::system_Users.add_Phone_Number_In_Person to manager
 
---trigger
 
 
 
 /* for login and users*/
-create login abcd with password='1234'/*default schema and default database add mareg*/
-create user abcd for login abcd
-exec sp_addRoleMember customer,abcd
+create login admin1 with password='1234'
+create user admin1 for login admin1
+exec sp_addRoleMember customer,admin1
 
-create login efgh with password='1234'
-create user efgh for login efgh
-exec sp_addRoleMember manager,efgh
+create login manager1 with password='1234'
+create user manager1 for login manager1
+exec sp_addRoleMember manager,manager1
 
-create login hijk with password='1234'
-create user hijk for login hijk
-exec sp_addRoleMember admin,hijk
+create login customer1 with password='1234'
+create user customer1 for login customer1
+exec sp_addRoleMember admin,customer1
 
 
-
+/* to remove user from role we can use sp_dropsrvrolemember [role name],[user name]*/
 
 								/*---create tables---*/
 
@@ -205,7 +207,7 @@ color varchar(15) not null,
 manufacture_Year int not null,
 mark varchar(30) not null,
 model varchar(30) not null,
-type varchar(30) not null,
+type varchar(30) not null, --values will be: either 'luxury' or 'transportation' to indicate the types of the cars use
 transmission_Type varchar(30) not null,
 fuel_Type varchar(30) not null,
 status varchar(20) not null,/*values will be: available(for both rental and sales), rented, sold, service, reserved*/
@@ -275,6 +277,83 @@ date_Of_Sale date not null,
 payment money not null
 )
   
+
+  /*login*/ /*different sql statements for retrieving, updating and deleting data from tables ..for the question 2.IV*/
+select * from login.Login
+Insert into login.Login (email,password) values	
+		('seyfekalu@gmail.com','1234'),
+		('bekele@gmail.com','1235'),
+		('emnettilahun@gmail.com','abc'),
+		('sabaabayneh@gmail.com','4321'),
+		('yonasmelaku@gmail.com','1236')
+/*customer*/
+select * from system_Users.Customer
+Insert into system_Users.Customer(f_Name,m_Name,l_Name,email,driving_Licence_No,birth_Date)VALUES
+		('Saba','Abayneh','Kefele','sabaabayneh@gmail.com','BD123','1883-05-18'),
+		('Yonas','Melaku','Kebede','yonasmelaku@gmail.com','AA234','1873-10-22')
+	 /*   */
+SELECT * FROM system_Users.Customer_Address
+INSERT INTO system_Users.Customer_Address(city,kebele,customer_ID)VALUES
+		('BAHIRDAR',14,1),
+		('ADISS ABEBA',15,2)
+	 /*   */
+SELECT * FROM system_Users.Customer_Phone_No
+INSERT INTO system_Users.Customer_Phone_No(phone_No,customer_ID)VALUES
+		(0911785432,1),
+		(0912785432,2)
+	  /*   */
+select * from system_Users.Admin
+INSERT INTO system_Users.Admin(f_Name,m_Name,l_Name,EMAIL )VALUES
+		('Seyfu','Bekalu','kurabachew','seyfubekalu@gmail.com')
+  /*   */
+select * from system_Users.Admin_Address
+INSERT INTO system_Users.ADMIN_ADDRESS
+		(ADMIN_ID,CITY,KEBELE)
+VALUES(1,'BAHIRDAR','14')
+ /*   */
+ select * from system_Users.Admin_Phone_No
+INSERT INTO system_Users.Admin_Phone_No
+	(ADMIN_ID,phone_No)	
+VALUES(1,0983678467)
+	  /*   */
+select * from system_Users.Manager
+	  /*   */
+	  select * from system_Users.Manager_Address
+	  /*   */
+	  select * from system_Users.Manager_Phone_No
+	  /* RESERVATION  */
+
+insert into resources.Car(color,manufacture_Year,mark,model,type,transmission_Type,fuel_Type,status,horse_Power,sales_Price,rental_Price_Per_Day,total_Rented_Date,car_Date,plate_Number)
+values
+		('red',2000,'Toyota','corolla','luxury','automatic','benzene',0,2000,1000000,2500,0,'2/5/2022',12366)
+insert into resources.Car(color,manufacture_Year,mark,model,type,transmission_Type,fuel_Type,status,horse_Power,sales_Price,rental_Price_Per_Day,total_Rented_Date,car_Date,plate_Number)
+values('white',2000,'Toyota','highroof','transportation','manual','gasoline',50,2200,800000,1800,0,'2/5/2022',234223)
+insert into resources.Car(color,manufacture_Year,mark,model,type,transmission_Type,fuel_Type,status,horse_Power,sales_Price,rental_Price_Per_Day,total_Rented_Date,car_Date,plate_Number)
+values('black',2000,'Nissan','s32','luxury','automatic','gasoline',0,2000,1500000,2500,0,'2/5/2022',347676)
+
+/*for the matter of simplicity, we recommend inserting other tables by using the procedures provided below on the next pages*/
+
+	  /*   */
+
+
+  /*---  INDEXS ---*/
+		CREATE INDEX reservation_idx
+ON resources.RESERVATION (reservation_ID,customer_ID,reserve_Type,reserve_Payment,reserved_Date, status);
+ 
+   CREATE INDEX car_idx
+   on resources.CAR(Car_Id,TYPE,MARK,MODEL,TRANSMISSION_TYPE,manufacture_year ,COLOR,STATUS);
+
+   CREATE INDEX CUST_idx 
+   on system_Users.customer(F_NAME, m_NAME, EMAIL,driving_licence_no,customer_id);
+
+   CREATE INDEX ADMIN_idx
+   on system_Users.admin(F_NAME, m_NAME, EMAIL,admin_id);
+
+    CREATE INDEX Manager_idx
+   on system_Users.manager(F_NAME, L_NAME, EMAIL,manager_id)
+
+   create index rent_idx
+   on resources.rent(rent_id,pick_up_date, return_date,payment)
 
 
 
@@ -638,13 +717,15 @@ end
 create procedure system_Users.create_Customer_Account(@f_Name varchar(20),@m_Name varchar(20),@l_Name varchar(20),@driving_Licence_No int, @birth_Date date, @email varchar(30),@password varchar(15),@phone_Number int,@city varchar(15),@kebele varchar(15))
 as
 begin
-	if exists(select * from Customer where email=@email)
+	if exists(select * from Customer where email=@email) or exists(select * from Manager where email=@email) or exists(select * from Admin where email=@email)
 		print 'there is already a customer account with the email you inserted'
 	else if exists(select * from Customer where driving_Licence_No=@driving_Licence_No and email!=null)
 		print 'there is already a customer account with the driving licence number you inserted'
+	else if datediff(year,@birth_Date,getdate())<18
+		print 'age should be above 18'
 	else
 	  begin
-		insert into Login values(@email,@password)
+		insert into login.Login values(@email,@password)
 		insert into Customer values(@f_Name,@m_Name,@l_Name,@driving_Licence_No,@birth_Date,@email)
 	    declare @customer_ID int
 		set @customer_ID=(select customer_ID from Customer where email=@email)
@@ -670,11 +751,11 @@ end
 create procedure system_Users.create_Admin_Account(@f_Name varchar(20),@m_Name varchar(20),@l_Name varchar(20),@email varchar(30),@password varchar(15),@phone_Number int,@city varchar(15),@kebele varchar(15))
 as
 begin
-	if exists(select * from Admin where email=@email)
+	if exists(select * from Customer where email=@email) or exists(select * from Manager where email=@email) or exists(select * from Admin where email=@email)
 		print 'there is already an admin account with the email you inserted'
 	else
 	  begin
-		insert into Login values(@email,@password)
+		insert into login.Login values(@email,@password)
 		insert into Admin values(@f_Name,@m_Name,@l_Name,@email)
 		declare @admin_ID int
 		set @admin_ID=(select admin_ID from Admin where email=@email)
@@ -699,11 +780,11 @@ end
 create procedure system_Users.create_Manager_Account(@f_Name varchar(20),@m_Name varchar(20),@l_Name varchar(20),@email varchar(30),@password varchar(15),@phone_Number int,@city varchar(15),@kebele varchar(15))
 as
 begin
-	if exists(select * from Manager where email=@email)
+	if exists(select * from Customer where email=@email) or exists(select * from Manager where email=@email) or exists(select * from Admin where email=@email)
 		print 'there is already a manager account with the email you inserted'
 	else
 	  begin
-		insert into Login values(@email,@password)
+		insert into login.Login values(@email,@password)
 		insert into Manager values(@f_Name,@m_Name,@l_Name,@email)
 		declare @manager_ID int
 		set @manager_ID=(select manager_ID from Manager where email=@email)
@@ -777,19 +858,32 @@ create procedure resources.add_New_Car(@color varchar(15),@manufactured_Year int
 							 @sales_Price money,@plate_Number int)
 as
 begin
-	insert into Car values(@color,@manufactured_Year,@mark,@model,@type,@transmission_Type,@fuel_Type,
+	if exists(select * from Car where plate_Number=@plate_Number)
+	  print 'the plate number already exists'
+	else
+	  begin
+		insert into Car values(@color,@manufactured_Year,@mark,@model,@type,@transmission_Type,@fuel_Type,
 						   'available',@horse_Power,@sales_Price,@sales_Price*0.005,0,getdate(),@plate_Number)
+	  end
 end
 
+
+
 /*to add used cars*/
-create procedure resources.add_Used_Car(@color varchar(15),@manufactured_Year int,@mark varchar(30),@model varchar(30),
+alter procedure resources.add_Used_Car(@color varchar(15),@manufactured_Year int,@mark varchar(30),@model varchar(30),
                               @type varchar(30),@transmission_Type varchar(30),@fuel_Type varchar(30),@horse_Power int,
 							  @sales_Price money,@total_Rented_Date int,@plate_Number int)
 as
 begin
-	insert into Car values(@color,@manufactured_Year,@mark,@model,@type,@transmission_Type,@fuel_Type,
+	if exists(select * from Car where plate_Number=@plate_Number)
+	  print 'the plate number already exists'
+	else
+	  begin
+		insert into Car values(@color,@manufactured_Year,@mark,@model,@type,@transmission_Type,@fuel_Type,
 	               'available',@horse_Power,@sales_Price,@sales_Price*0.005,@total_Rented_Date,getdate(),@plate_Number)
+	  end
 end
+
 
 				/*to cancel reservation (delete the record from reservation table and add to Canceled_Reservation table)*/
 
@@ -799,13 +893,13 @@ begin
 	if exists(select * from Reservation where customer_ID=@customer_ID and reservation_ID=@reservation_ID and status=0)
 	begin
 		insert into Canceled_Reservation select *,'' from Reservation where reservation_ID=@reservation_ID /*incase the columns have to be of the same number I added empty string*/
+		update Car 
+		  set status='available' where car_ID=(select car_ID from Reservation where reservation_ID=@reservation_ID)
 		alter table Reservation disable trigger avoid_Deleting
 			delete from Reservation where reservation_ID=@reservation_ID
 		alter table Reservation enable trigger avoid_Deleting
 		update Canceled_Reservation
 		  set cancel_Type='canceled' where reservation_ID=@reservation_ID
-		update Car 
-		  set status='available' where car_ID=(select car_ID from Reservation where reservation_ID=@reservation_ID)
 	end
 	else
 		print 'there is no such reservation'
@@ -858,7 +952,7 @@ begin
 		update Reservation
 		 set status=1 where reservation_ID=@reservation_ID
 		update Car
-		 set status='rented'
+		 set status='rented' where car_ID in(select car_ID from Reservation where reservation_ID=@reservation_ID)
 		insert into Managers_Manage_Reservation values (@reservation_ID,@manager_ID)
 		declare @rent_ID int
 		set @rent_ID=(select rent_ID from Rent where reservation_ID=@reservation_ID)
@@ -940,7 +1034,7 @@ begin
 		update Reservation
 		 set status=1 where reservation_ID=@reservation_ID
 		update Car
-		 set status='sold'
+		 set status='sold' where car_ID in(select car_ID from Reservation where reservation_ID=@reservation_ID)
 		insert into Managers_Manage_Reservation values (@reservation_ID,@manager_ID)
 	end
 	else
@@ -966,8 +1060,8 @@ begin
 		insert into Rent values(@reservation_ID,getdate(),dateadd(day,@no_Of_Days_Rented,getdate()),@payment)
 		update Reservation
 		 set status=1 where reservation_ID=@reservation_ID
-		update Car
-		 set status='rented'
+		update Car 
+		 set status='rented' where car_ID in(select car_ID from Reservation where reservation_ID=@reservation_ID)
 		insert into Managers_Manage_Reservation(reservation_ID) values (@reservation_ID)
 		declare @rent_ID int
 		set @rent_ID=(select rent_ID from Rent where reservation_ID=@reservation_ID)
@@ -996,7 +1090,7 @@ begin
 		update Reservation
 		 set status=1 where reservation_ID=@reservation_ID
 		update Car
-		 set status='sold'
+		 set status='sold' where car_ID in(select car_ID from Reservation where reservation_ID=@reservation_ID)
 		insert into Managers_Manage_Reservation(reservation_ID) values (@reservation_ID)
 	end
 	else
@@ -1124,7 +1218,7 @@ end
 create trigger resources.update_Price on resources.Car for insert 
 as 
 begin
-	if((select total_Rented_Date from Car)%100=0 and not(select status from inserted)='sold')/*% doesn't work so....*/
+	if((select total_Rented_Date from Car)%100=0 and (select total_Rented_Date from Car)/100>0 and (select total_Rented_Date from Car)>0 and not(select status from inserted)='sold')
 	begin	
 		update Car
 		set sales_Price=sales_Price*.98
@@ -1239,17 +1333,38 @@ end
 create trigger resources.cancel_Expired_Reservation on resources.Reservation after insert /*idk how inserted works, I just	assumed it only refers to the one the trigger is set to*/
 as
 begin
-	if((select dbo.calc_Reserve_Date(reserve_Payment) from inserted)<datediff(day,(select reserved_Date from inserted),getdate()) and 
+	if((select resources.calc_Reserve_Date(reserve_Payment) from inserted)<datediff(day,(select reserved_Date from inserted),getdate()) and 
 	    not exists(select * from Rent where reservation_ID=(select reservation_ID from inserted)) and 
 		not exists(select * from Sale where reservation_ID=(select reservation_ID from inserted)) and
 		not exists(select * from Canceled_Reservation where reservation_ID=(select reservation_ID from inserted)))
 	begin
-		alter table Reservation disable trigger avoid_Deleting
+	    update Car set status='available' where car_ID=(select car_ID from inserted)
+		alter table Reservation disable trigger avoid_Deleting8
 			delete from Reservation where reservation_ID=(select reservation_ID from inserted)
-		alter table Reservation enable trigger avoid_Deleting
+		alter table Reservation enable trigger avoid_Deleting8
 		insert into Canceled_Reservation select *,'' from deleted /*incase column numbers must be equal*/
-		update Car set status='available' where car_ID=(select car_ID from inserted)
 		update Canceled_Reservation
 		  set cancel_Type='expired' where reservation_ID=(select reservation_ID from inserted)
 	end
 end
+
+
+/* to full back up our database */
+BACKUP DATABASE [car_sales_and_rental] TO  DISK = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\Backup\car_sales.bak' WITH NOFORMAT, NOINIT,  NAME = N'car_sales-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
+GO
+
+/* to restore the database */
+
+--first let's drop the database
+drop database car_sales_and_rental
+
+--then let's restore
+
+USE [master]
+RESTORE DATABASE [car_sales_and_rental] FROM  DISK = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\Backup\car_sales.bak' WITH  FILE = 1,  NOUNLOAD,  STATS = 5
+
+GO
+
+--let's check if it's restored
+
+use car_sales_and_rental
